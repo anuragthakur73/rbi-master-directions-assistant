@@ -1,0 +1,67 @@
+﻿run_id,timestamp,interface,question,outcome,answer,retrieved,top_similarity,num_paragraphs,model,effort,k_paras,system_prompt,retrieval_seconds,total_seconds,input_tokens,output_tokens,thinking_tokens,stop_reason,error
+a59e22da,2026-10-25T22:44:56,ui,LTV and risk weight for an ₹80 lakh home loan?,answered,"The answer depends on the sanction date, so please confirm it.
+
+**Sanctioned after June 06, 2017 (general table):** For an individual housing loan above ₹75 lakh, the LTV ratio is up to 75% and the risk weight is 50% [Credit Facilities, Para 111(a)].
+
+**Sanctioned up to June 06, 2017:** For a loan above ₹75 lakh, the LTV ratio is up to 75% and the risk weight is 75% [Credit Facilities, Para 111, proviso (a)(iii)].
+
+**Sanctioned Oct 16, 2020 to Mar 31, 2023:** Para 112 sets a counter-cyclical risk weight of 35% for LTV up to 80% and 50% for LTV above 80% and up to 90% [Credit Facilities, Para 112]. The excerpt states no loan-size limit. This may overlap with the 75% LTV cap in Para 111, and the excerpts don't say how the two interact. Please check the full text.","Credit Facilities, Para 111 (0.813) | Credit Facilities, Para 44 (0.779) | Credit Facilities, Para 112 (0.74) | Credit Facilities, Para 219I (0.717) | Credit Facilities, Para 113 (0.713)",0.813,5,claude-sonnet-5-5,medium,5,system_prompt_v1.md,0.54,6.74,2268,749,415,end_turn,
+97b0f2bc,2026-10-25T22:45:52,ui,Compensation for a delayed credit report correction?,answered,"Compensation for delayed credit information correction, per the excerpts:
+
+- **Amount:** ₹100 per calendar day if the complaint is not resolved within 30 calendar days of filing with a CI or CIC [Credit Information Reporting, Para 36(1)].
+- **CI's limit:** A CI must send updated information to CICs within 21 calendar days of being informed by the complainant or a CIC, failing which it pays compensation [Credit Information Reporting, Para 36(2)].
+- **Apportionment:** Compensation is shared proportionately among the CIs/CICs concerned [Credit Information Reporting, Para 36(4)].
+- **Resolution date:** The date the rectified CIR is sent to the complainant's postal address or email [Credit Information Reporting, Para 36(7)].
+- **Payment:** Credited within five working days of resolution [Credit Information Reporting, Para 36(9)].
+- **Exclusions:** Disputes under Section 18 of CICRA, internal administration/HR matters, and matters pending in other fora [Credit Information Reporting, Para 36(12)].
+
+Do you want a calculation for a specific case?","Credit Information Reporting, Para 36 (0.785) | Credit Information Reporting, Para 10 (0.673) | Credit Information Reporting, Para 35 (0.666) | Credit Information Reporting, Para 19 (0.663) | Credit Facilities, Para 251 (0.657)",0.785,5,claude-sonnet-5-5,medium,5,system_prompt_v1.md,0.04,3.2,8003,383,0,end_turn,
+53c87b76,2026-10-25T22:46:32,ui,Valuation reports needed for a ₹60 crore property?,answered,"A bank must obtain a minimum of two independent valuation reports for properties valued at ₹50 crore or above [Credit Risk Management, Para 70(3)]. A ₹60 crore property is above that threshold, so at least two independent reports are required.
+
+The valuation must be done by professionally qualified independent valuers, meaning valuers who have no direct or indirect interest in the property [Credit Risk Management, Para 70(2)]. The bank must also have a Board-approved valuation policy covering properties accepted as collateral [Credit Risk Management, Para 70(1)].
+
+If the property is land accepted as collateral, it must be valued at the current market price only [Credit Facilities, Para 100(2)].","Credit Risk Management, Para 70 (0.749) | Credit Facilities, Para 100 (0.7) | Credit Risk Management, Para 73 (0.685) | Credit Facilities, Para 219I (0.684) | Credit Facilities, Para 133J (0.677)",0.749,5,claude-sonnet-5-5,medium,5,system_prompt_v1.md,0.04,4.3,2022,231,0,end_turn,
+238b1a3e,2026-10-25T22:46:56,ui,Is a bank guarantee funded or non-funded?,answered,"Guarantees issued by a bank are dealt with under Chapter XVI, ""Non-Fund Based (NFB) Credit Facilities"", which indicates they are treated as non-funded. [Credit Facilities, Para 404] sets out the features of a guarantee issued by the bank. It must be irrevocable, unconditional and incontrovertible, with a clear mechanism for honouring it without demur when invoked.
+
+The excerpts contain no standalone sentence that defines a guarantee as ""non-funded"". The classification comes from the chapter heading.
+
+Separately, a bank may not give a guarantee favouring another RE so that the RE can provide fund-based credit to an obligor, unless RBI specifically permits it. This does not apply to credit facilities extended against guarantees pertaining to trade-related transactions [Credit Facilities, Para 414].","Credit Facilities, Para 404 (0.726) | Credit Facilities, Para 414 (0.724) | Credit Facilities, Para 409 (0.721) | Credit Facilities, Para 407 (0.716) | Credit Facilities, Para 29 (0.714)",0.726,5,claude-sonnet-5-5,medium,5,system_prompt_v1.md,0.04,4.65,1588,506,228,end_turn,
+6bb48b1b,2026-10-25T22:47:18,ui,What does Para 52 say?,answered,"Para 52 of the Credit Risk Management Directions, in Chapter VI (Country Risk Management), says: ""A bank shall monitor their country exposures on a real time basis."" [Credit Risk Management, Para 52]","Credit Risk Management, Para 52 (0.6) | Credit Risk Management, Para 65 (0.583) | Credit Facilities, Para 125 (0.559) | Credit Facilities, Para 390 (0.558) | Credit Facilities, Para 106 (0.555)",0.6,5,claude-sonnet-5-5,medium,5,system_prompt_v1.md,0.04,2.02,2207,133,58,end_turn,
+8f2e4b4c,2026-10-25T22:49:16,ui,A customer already has a gold consumption loan of ₹2 lakh and wants a new one of ₹4 lakh. What maximum LTV applies to the new loan?,answered,"Para 44 sets the maximum LTV by the ""total consumption loan amount per borrower"" [Credit Facilities, Para 44]. The excerpts do not say whether the ₹2 lakh existing loan and the ₹4 lakh new loan are added together for this purpose, so two readings are possible:
+
+- **If the total is ₹6 lakh (₹2 lakh + ₹4 lakh):** this is more than ₹5 lakh, so the maximum LTV is 75 per cent [Credit Facilities, Para 44].
+- **If only the new ₹4 lakh loan counts:** this is above ₹2.5 lakh and up to ₹5 lakh, so the maximum LTV is 80 per cent [Credit Facilities, Para 44].
+
+The table's wording, ""total … per borrower"", points to the first reading. The excerpts do not state how existing loans are treated, so this is not confirmed.
+
+Whichever ratio applies must be maintained throughout the loan tenor [Credit Facilities, Para 45].
+
+Can you confirm whether the existing ₹2 lakh loan is a consumption loan against gold or silver collateral with your bank?","Credit Facilities, Para 44 (0.837) | Credit Facilities, Para 45 (0.716) | Credit Facilities, Para 60E (0.716) | Credit Facilities, Para 219G (0.712) | Credit Facilities, Para 33 (0.71)",0.837,5,claude-sonnet-5-5,medium,5,system_prompt_v1.md,0.04,3.68,1694,380,0,end_turn,
+f9a33a8f,2026-10-25T22:49:38,ui,A ₹50 lakh home loan was sanctioned in March 2015 at 78% LTV. What risk weight applies?,answered,"**Risk weight: 50%.**
+
+1. The loan was sanctioned in March 2015, which is before June 06, 2017. The older table in the proviso therefore applies [Credit Facilities, Para 111].
+2. At ₹50 lakh, it is an individual housing loan above ₹30 lakh and up to ₹75 lakh, category (a)(ii) [Credit Facilities, Para 111].
+3. An LTV of 78% is above 75% and up to 80%, which carries a 50% risk weight [Credit Facilities, Para 111].
+
+The current table would give 35% for this band (up to 80% LTV), but it covers only loans sanctioned after June 06, 2017, so it does not apply here [Credit Facilities, Para 111]. The counter-cyclical table covers only loans sanctioned between October 16, 2020 and March 31, 2023, so it does not apply either [Credit Facilities, Para 112].","Credit Facilities, Para 111 (0.78) | Credit Facilities, Para 112 (0.746) | Credit Facilities, Para 44 (0.721) | Credit Facilities, Para 219G (0.705) | Credit Facilities, Para 128 (0.697)",0.78,5,claude-sonnet-5-5,medium,5,system_prompt_v1.md,0.04,3.89,2653,451,145,end_turn,
+976a969a,2026-10-25T22:50:05,ui,A private limited company has total borrowings of ₹6 crore from banks and NBFCs and has not obtained an LEI. Can we renew its cash credit limit?,answered,"The excerpts do not say whether a cash credit limit can be renewed when the borrower has no LEI.
+
+What they do say:
+- A bank must ensure that non-individual borrowers with aggregate exposure of ₹5 crore or more from banks and financial institutions (including NBFCs) obtain LEI codes [Credit Risk Management, Para 64].
+- Exposure covers fund-based and non-fund-based (credit and investment) exposure. The higher of the aggregate sanctioned limit or the outstanding balance is reckoned [Credit Risk Management, Para 64].
+- Lenders can ascertain aggregate exposure from their own information, the CRILC database, or a borrower declaration [Credit Risk Management, Para 64].
+
+A private limited company is a non-individual borrower. If its ₹6 crore of borrowings is the aggregate exposure as defined above, it is over the ₹5 crore threshold and is expected to obtain an LEI [Credit Risk Management, Para 64].
+
+On the renewal itself: Not found in the provided documents.","Credit Risk Management, Para 64 (0.742) | Credit Facilities, Para 226 (0.735) | Credit Facilities, Para 224 (0.728) | Credit Facilities, Para 219J (0.719) | Credit Facilities, Para 219L (0.717)",0.742,5,claude-sonnet-5-5,medium,5,system_prompt_v1.md,0.04,3.29,2246,348,0,end_turn,
+bd753caf,2026-10-25T22:50:37,ui,"By when must the bank submit credit information as on the 16th of the month to the credit bureaus, and what must it send?",answered,"**Deadline:** The bank must submit credit information as on the 16th within four (4) calendar days of that date [Credit Information Reporting, Para 10(2)(iii)]. Annex VI's illustration gives the same date: 20th [Credit Information Reporting, Annex VI].
+
+**What to send:** Only ""incremental accounts,"" not the full file [Credit Information Reporting, Para 10(2)(iii)]. These are:
+- (a) Accounts opened since the last reporting reference date.
+- (b) Accounts where the borrower relationship has ended since the last reporting reference date.
+- (c) Accounts changed because of an action or transaction initiated by the borrower. This includes repayment, change in outstanding balance, and updates to demographic details, related party, guarantors, ownership or account type.
+- (d) Accounts where interest and/or an instalment of principal is overdue.
+
+Accounts whose only change is in days past due must also be reported [Credit Information Reporting, Para 10(2)(iii), Explanation].
+
+No instance of repayment, including the last instalment, may be left unreported [Credit Information Reporting, Para 10(3)].","Credit Information Reporting, Para 10 (0.701) | Credit Information Reporting, Annex VI (0.687) | Credit Facilities, Para 347 (0.685) | Credit Risk Management, Para 12 (0.682) | Credit Facilities, Para 292 (0.677)",0.701,5,claude-sonnet-5-5,medium,5,system_prompt_v1.md,0.04,3.12,2230,376,0,end_turn,
