@@ -100,7 +100,7 @@ def summarise(rows: list[dict]) -> dict:
         "in_avg": statistics.mean(tokens_in) if tokens_in else None,
         "out_avg": statistics.mean(tokens_out) if tokens_out else None,
         "by_cat": by_cat,
-        "config": {k: rows[0].get(k, "") for k in ("model", "effort", "k_paras", "system_prompt")} if rows else {},
+        "config": {k: rows[0].get(k, "") for k in ("model", "effort", "k_paras", "system_prompt", "retrieval_mode")} if rows else {},
     }
 
 
@@ -108,7 +108,7 @@ def report(name: str, s: dict) -> str:
     lines = [f"### {name}", ""]
     cfg = s["config"]
     lines.append(f"Config: {cfg.get('model')}, effort {cfg.get('effort')}, top {cfg.get('k_paras')} paragraphs, "
-                 f"{cfg.get('system_prompt')}. Graded {s['graded']}/{s['n']} ({s['manual']} by hand).")
+                 f"{cfg.get('system_prompt')}, {cfg.get('retrieval_mode') or 'semantic'} retrieval. Graded {s['graded']}/{s['n']} ({s['manual']} by hand).")
     if s["unreviewed"]:
         lines.append(f"**Not yet scored (auto-check said review):** {', '.join(s['unreviewed'])}")
     lines += ["", "| Metric | Result |", "|---|---|",

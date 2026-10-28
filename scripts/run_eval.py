@@ -9,6 +9,7 @@ Run from the repo root:
   python scripts/run_eval.py --retrieval-only          free: checks retrieval only, no API calls
   python scripts/run_eval.py --label baseline          full run: about 40 API calls
   python scripts/run_eval.py --label baseline --ids S01,M02,A04    only some questions
+  python scripts/run_eval.py --label semantic --retrieval semantic   re-run with Week 2 retrieval
 
 Then open the results CSV in Excel, fill the four "manual_" columns, save, and run
   python scripts/score_eval.py results/<that file>.csv
@@ -43,7 +44,7 @@ MANUAL_COLS = ["manual_correct", "manual_citation_ok", "manual_hallucination", "
 FIELDS = ["id", "category", "expected_behavior", "question", "expected_answer", "expected_sources",
           "answer", "retrieved", "retrieval_hit", "retrieval_rank", "refused", "facts_found", "cited_expected",
           "auto_verdict", *MANUAL_COLS,
-          "model", "effort", "k_paras", "system_prompt", "total_seconds", "input_tokens", "output_tokens",
+          "model", "effort", "k_paras", "system_prompt", "retrieval_mode", "total_seconds", "input_tokens", "output_tokens",
           "thinking_tokens", "stop_reason", "error"]
 
 
@@ -125,7 +126,11 @@ def main() -> None:
     parser.add_argument("--label", default="run", help="short name for this run, e.g. baseline, prompt_v2, k8")
     parser.add_argument("--ids", help="comma-separated test ids to run, e.g. S01,M02")
     parser.add_argument("--retrieval-only", action="store_true", help="check retrieval only; no API calls, no cost")
+    parser.add_argument("--retrieval", choices=["semantic", "hybrid"],
+                        help="override RETRIEVAL_MODE in answer.py for this run")
     args = parser.parse_args()
+    if args.retrieval:
+        engine.RETRIEVAL_MODE = args.retrieval
 
     cases = load_cases(args.ids)
     if not cases:
@@ -143,6 +148,7 @@ def main() -> None:
         rank = retrieval_rank(case["question"], expected) if expected else None
         row = {k: case[k] for k in ("id", "category", "expected_behavior", "question", "expected_answer", "expected_sources")}
         row.update({"retrieval_rank": rank or "", "model": engine.MODEL, **settings,
+                    "retrieval_mode": engine.RETRIEVAL_MODE,
                     "retrieval_hit": "n/a" if not expected else ("yes" if rank else "no")})
 
         if not args.retrieval_only:
@@ -169,6 +175,7 @@ def main() -> None:
         rows.append(row)
         status = row.get("auto_verdict", f"retrieval {'hit @' + str(rank) if rank else ('miss' if expected else 'n/a')}")
         print(f"[{n:>2}/{len(cases)}] {case['id']:<4} {status}")
+    print(f"\nRetrieval mode: {engine.RETRIEVAL_MODE}")
 
     with out_file.open("w", newline="", encoding="utf-8-sig") as f:   # utf-8-sig so Excel shows ₹
         writer = csv.DictWriter(f, fieldnames=FIELDS)

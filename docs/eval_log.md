@@ -100,3 +100,36 @@ Each entry records a test run: what changed, what was tested, the result, and wh
 - Retrieval missed the expected paragraph on S05, S11, S13 and A05. Low-rank hits: M04 (rank 5), S17 (rank 4).
 - Adversarial is the weakest category. A02 and A04 were flagged by the auto-check even though their paragraph was retrieved at rank 1, so the issue there is likely the answer, not retrieval.
 - The auto-check flagged N03, N04, N05 and A01 as "answered", but hand grading scored 8/8 correct refusals. The auto-check's refusal detection probably misses some refusal wordings.
+---
+
+## 29 Oct 2026: Iteration 1 - hybrid retrieval (40 questions)
+
+**Change (one variable):** retrieval mode `semantic` → `hybrid` (`scripts/keyword_search.py`, `RETRIEVAL_MODE` in `answer.py`). Hybrid adds direct paragraph lookup ("Para 70 of CRM") and BM25 keyword search, merged with the embedding results by reciprocal rank fusion. Same model (claude-sonnet-5-5, effort medium), same top 5 paragraphs, same system prompt v1.
+
+**Result:** `results/eval_hybrid_20261028_2324.csv`, graded by hand.
+
+| Metric | Baseline (semantic) | Hybrid |
+|---|---|---|
+| Correct (partial = 0.5) | 82% (33/40) | **91% (36.5/40)** |
+| Fully correct | 78% (31/40) | 88% (35/40) |
+| Correct refusals (out-of-corpus) | 100% (8/8) | 100% (8/8) |
+| False refusals | 9% (3/32) | 3% (1/32) |
+| Citation accurate | 100% | 100% |
+| Hallucination rate | 0% | 0% |
+| Expected paragraph sent to Claude | 88% (28/32) | 97% (31/32) |
+| Avg input tokens | 2,565 | 2,635 (+3%) |
+| Median / p95 latency | 2.8s / 6.1s | 2.8s / 6.1s |
+
+**Fixed:** S05 (Para 41 now retrieved), S13 (Para 215), A05 (Para 70 via paragraph lookup), A04 (Para 111 now retrieved; clean clarifying question). Improved but still partial: M04 (Para 130 retrieved, Para 132 still missing). No question got worse.
+
+**Still failing**
+- S11 (false refusal): question says "maximum", Para 170I says "shall not exceed". No shared words, and the 170F chunk is only a heading.
+- M08: question says "renewed", Para 65 says "renewal"; the light stemmer does not match them.
+- S12 (partial): still flags a false 360 vs 365-day conflict; Para 250 (context for 251) not retrieved.
+- A02 (partial): says 90.3% "exceeds that band" but not plainly that it breaches the 90% ceiling.
+
+**Decision:** keep hybrid as the default. It passes the PRD target (≥ 85% correct) at almost no extra cost.
+
+**Caution:** the test set was also used to diagnose the misses, so this score may be slightly optimistic. I did not add word lists tuned to these questions; the remaining wording-gap failures were left in on purpose.
+
+**Next (Iteration 2):** system prompt v2: state plainly when a figure exceeds a limit (A02); before flagging a conflict, check whether one paragraph applies only to a narrower case (S12); keep refusals to at most one line of related context.

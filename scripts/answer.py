@@ -3,6 +3,8 @@ Week 2, Step 5 - Retrieve and generate.
 
 Takes a question, retrieves the most relevant RBI paragraphs from the Chroma store,
 and asks Claude to answer ONLY from them, with citations (system prompt: prompts/system_prompt_v1.md).
+Week 3: retrieval can be "semantic" (Week 2 baseline) or "hybrid" (adds paragraph lookup and keyword
+search, see scripts/keyword_search.py). Set RETRIEVAL_MODE below.
 
 Run from the repo root:
   python scripts/answer.py "What is the maximum LTV for a gold loan of 4 lakh?"
@@ -24,6 +26,7 @@ import anthropic
 from dotenv import load_dotenv
 
 from embed_store import search          # same embedding model and settings as Step 4
+from keyword_search import keyword_search, lookup   # Week 3: keyword search + paragraph lookup
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -36,6 +39,10 @@ EFFORT = "medium"               # how much Claude thinks first: "low", "medium" 
 SYSTEM_PROMPT_FILE = ROOT / "prompts" / "system_prompt_v1.md"
 K_CHUNKS = 10                   # chunks fetched from Chroma
 K_PARAS = 5                     # distinct paragraphs passed to Claude (parts of one paragraph count once)
+RETRIEVAL_MODE = "hybrid"       # "semantic" = Week 2 baseline (embeddings only)
+                                # "hybrid"   = Week 3: + paragraph lookup + keyword (BM25) search, merged by rank
+K_KEYWORD = 10                  # chunks fetched by keyword search in hybrid mode
+RRF_K = 60                      # standard constant for merging two ranked lists (reciprocal rank fusion)
 
 # Short names match the citation style in the system prompt: [Credit Facilities, Para 44]
 SHORT_NAMES = {
@@ -57,10 +64,39 @@ def load_system_prompt() -> str:
     return (block.group(1) if block else raw).strip()
 
 
+def candidate_chunks(question: str) -> list[dict]:
+    """Chunks in best-first order.
+
+    semantic: embedding search only (the Week 2 baseline).
+    hybrid:   1. paragraphs named in the question ("Para 70 of Credit Risk Management") come first;
+              2. then embedding results and keyword results, merged with reciprocal rank fusion:
+                 each chunk scores 1/(60 + rank) in each list it appears in, so a chunk that ranks
+                 well in both lists rises to the top, and a chunk only one method found still gets in.
+    The 'similarity' shown in the logs is the embedding score, or 'keyword' / 'lookup' for chunks
+    that only those methods found.
+    """
+    semantic = search(question, k=K_CHUNKS)
+    if RETRIEVAL_MODE == "semantic":
+        return semantic
+
+    named = [dict(c, similarity="lookup") for c in lookup(question)]
+    scores: dict[str, float] = {}
+    chunk_by_id: dict[str, dict] = {}
+    for rank, hit in enumerate(semantic, start=1):
+        scores[hit["id"]] = scores.get(hit["id"], 0) + 1 / (RRF_K + rank)
+        chunk_by_id[hit["id"]] = hit
+    for rank, hit in enumerate(keyword_search(question, k=K_KEYWORD), start=1):
+        scores[hit["id"]] = scores.get(hit["id"], 0) + 1 / (RRF_K + rank)
+        chunk_by_id.setdefault(hit["id"], dict(hit, similarity="keyword"))
+    fused = sorted(chunk_by_id.values(), key=lambda h: -scores[h["id"]])
+    named_ids = {c["id"] for c in named}
+    return named + [h for h in fused if h["id"] not in named_ids]
+
+
 def retrieve(question: str) -> list[dict]:
     """Top chunks, grouped so that parts of the same paragraph form one excerpt (fix from the smoke test)."""
     groups: dict[tuple, dict] = {}
-    for hit in search(question, k=K_CHUNKS):
+    for hit in candidate_chunks(question):
         key = (hit["source"], hit["para"])
         if key not in groups:
             if len(groups) == K_PARAS:
@@ -135,6 +171,7 @@ def answer(question: str, client: anthropic.Anthropic | None = None) -> dict:
                       f' ({e["best_similarity"]})' for e in excerpts],
         "documents": documents,
         "model": MODEL,
+        "retrieval_mode": RETRIEVAL_MODE,
         "retrieval_seconds": round(t_retrieve, 2),
         "total_seconds": round(time.time() - t0, 2),
         "input_tokens": response.usage.input_tokens,
@@ -151,7 +188,7 @@ def show(result: dict, show_context: bool) -> None:
     print("\n----- Retrieved (paragraph, similarity) -----")
     for r in result["retrieved"]:
         print("  " + r)
-    print(f"\n{result['model']} (effort {EFFORT}) | {result['total_seconds']}s total ({result['retrieval_seconds']}s retrieval) | "
+    print(f"\n{result['model']} (effort {EFFORT}, {RETRIEVAL_MODE} retrieval) | {result['total_seconds']}s total ({result['retrieval_seconds']}s retrieval) | "
           f"{result['input_tokens']} in / {result['output_tokens']} out tokens"
           + (f" ({result['thinking_tokens']} of them thinking)" if result["thinking_tokens"] is not None else ""))
     if result["stop_reason"] == "max_tokens":
