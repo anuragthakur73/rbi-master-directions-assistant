@@ -133,3 +133,40 @@ Each entry records a test run: what changed, what was tested, the result, and wh
 **Caution:** the test set was also used to diagnose the misses, so this score may be slightly optimistic. I did not add word lists tuned to these questions; the remaining wording-gap failures were left in on purpose.
 
 **Next (Iteration 2):** system prompt v2: state plainly when a figure exceeds a limit (A02); before flagging a conflict, check whether one paragraph applies only to a narrower case (S12); keep refusals to at most one line of related context.
+
+---
+
+## 29 Oct 2026: Iteration 2 - system prompt v2 (40 questions)
+
+**Change (one variable):** `prompts/system_prompt_v1.md` → `prompts/system_prompt_v2.md`. Retrieval stays hybrid; same model, effort and top 5 paragraphs. v2 changes: refusal sentence first with at most one related-paragraph line (rule 2); compare figures against mandatory limits and say plainly when exceeded (rule 4); answer with a stated assumption when one reading is clear (rule 5); check scope before flagging a conflict (rule 7).
+
+**Result:** `results/eval_prompt_v2_20261029_0020.csv`, graded by hand.
+
+| Metric | Baseline (semantic, v1) | Iter 1 (hybrid, v1) | Iter 2 (hybrid, v2) |
+|---|---|---|---|
+| Correct (partial = 0.5) | 82% | 91% | **94% (37.5/40)** |
+| Fully correct | 78% | 88% | 92% (37/40) |
+| Correct refusals | 100% | 100% | 100% |
+| False refusals | 9% (3/32) | 3% (1/32) | 6% (2/32) |
+| Citation accurate | 100% | 100% | 100% |
+| Hallucination rate | 0% | 0% | 2.5% (1/40, minor) |
+| Expected paragraph sent to Claude | 88% | 97% | 97% |
+| Median / p95 latency | 2.8s / 6.1s | 2.8s / 6.1s | 3.4s / 7.2s |
+| Avg input tokens | 2,565 | 2,635 | 2,880 |
+
+By category (iter 2): single 95%, multi 83%, not-found 100%, adversarial 100%.
+
+**Fixed by v2:** A02 now says "90.3% exceeds the 90% ceiling" and gives the maximum (₹27.9 lakh) without making a sanction decision (rule 4). S12 gives 360 days as the general rule and treats the 365-day paragraphs as narrower cases instead of flagging a false conflict (rule 7). Refusals are now one or two lines (rule 2), and M06 answers directly instead of asking a question (rule 5).
+
+**Trade-offs found**
+- M08: v1 gave the LEI rule and then said the renewal rule was "not found"; v2 collapses this into a one-line refusal. Same score, but less useful, so false refusals rise from 1 to 2. Rule 2 is too strict for questions the excerpts answer partly.
+- M03: one minor unsupported inference ("stamp duty would have to be funded by the borrower"); first hallucination in any run.
+- Cost and speed: input tokens +9% (longer prompt), median latency +0.6s.
+
+**Still failing (retrieval, not prompt):** S11 (Para 170I, "maximum" vs "shall not exceed"), M08 (Para 65, "renewed" vs "renewal"), M04 partial (Para 132).
+
+**Decision:** adopt v2 as the default (`SYSTEM_PROMPT_FILE` in `answer.py`). It scores highest and fixes the two answer-quality failures.
+
+**Candidates for v3 / later:** let partial answers through ("answer the part the excerpts cover, then say which part is not found"); add "do not add consequences or advice the excerpts don't state". Retrieval: query rewriting or synonym expansion for wording gaps; merge heading-only chunks such as Para 170F with their sub-paragraphs.
+
+**Caution:** the same 40 questions were used to find and fix problems, so these scores are likely optimistic. A fresh set of 10-15 unseen questions would give a fairer check before the retrospective.

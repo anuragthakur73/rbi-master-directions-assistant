@@ -36,7 +36,7 @@ load_dotenv(ROOT / ".env")
 MODEL = "claude-sonnet-5-5"     # current Sonnet model ID; try "claude-haiku-5-5" later for the cost comparison
 MAX_TOKENS = 2000               # ceiling on output INCLUDING Claude's thinking; the prompt keeps answers < 150 words
 EFFORT = "medium"               # how much Claude thinks first: "low", "medium" or "high" (model default is higher)
-SYSTEM_PROMPT_FILE = ROOT / "prompts" / "system_prompt_v1.md"
+SYSTEM_PROMPT_FILE = ROOT / "prompts" / "system_prompt_v2.md"   # v2 adopted after Week 3 iteration 2 (v1 = baseline)
 K_CHUNKS = 10                   # chunks fetched from Chroma
 K_PARAS = 5                     # distinct paragraphs passed to Claude (parts of one paragraph count once)
 RETRIEVAL_MODE = "hybrid"       # "semantic" = Week 2 baseline (embeddings only)

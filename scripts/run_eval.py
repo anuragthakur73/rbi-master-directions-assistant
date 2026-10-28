@@ -10,6 +10,7 @@ Run from the repo root:
   python scripts/run_eval.py --label baseline          full run: about 40 API calls
   python scripts/run_eval.py --label baseline --ids S01,M02,A04    only some questions
   python scripts/run_eval.py --label semantic --retrieval semantic   re-run with Week 2 retrieval
+  python scripts/run_eval.py --label prompt_v2 --prompt v2           use prompts/system_prompt_v2.md
 
 Then open the results CSV in Excel, fill the four "manual_" columns, save, and run
   python scripts/score_eval.py results/<that file>.csv
@@ -128,9 +129,13 @@ def main() -> None:
     parser.add_argument("--retrieval-only", action="store_true", help="check retrieval only; no API calls, no cost")
     parser.add_argument("--retrieval", choices=["semantic", "hybrid"],
                         help="override RETRIEVAL_MODE in answer.py for this run")
+    parser.add_argument("--prompt", help="system prompt version for this run, e.g. v2 -> prompts/system_prompt_v2.md")
     args = parser.parse_args()
     if args.retrieval:
         engine.RETRIEVAL_MODE = args.retrieval
+    if args.prompt:
+        engine.SYSTEM_PROMPT_FILE = engine.ROOT / "prompts" / f"system_prompt_{args.prompt}.md"
+        engine.load_system_prompt()          # fail now, not after the first API call, if the file is missing
 
     cases = load_cases(args.ids)
     if not cases:
