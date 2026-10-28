@@ -225,3 +225,5 @@ data/raw/*
 # Source PDFs - re-download using data/manifest.csv
 data/raw/*
 !data/raw/.gitkeep
+data/processed/
+data/vectorstore/

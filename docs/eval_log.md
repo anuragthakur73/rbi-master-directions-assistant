@@ -64,3 +64,39 @@ Each entry records a test run: what changed, what was tested, the result, and wh
 - Prompt v2: "When a proposed figure exceeds a limit, say so directly."
 - Test question to add: existing ₹2 lakh gold loan + new ₹4 lakh loan (Para 44 slabs use the total per borrower).
 - Week 4: cap excerpt length per paragraph, or send only the retrieved parts, to control input tokens.
+
+---
+
+## 28 Oct 2026: Baseline v1 (40 questions)
+
+**Setup**
+- `scripts/run_eval.py --label baseline`, scored with `scripts/score_eval.py`; all 40 answers graded by hand.
+- Model `claude-sonnet-5-5`, effort `medium`, top 5 paragraphs, system prompt `prompts/system_prompt_v1.md`.
+- Questions: 19 single-paragraph, 9 multi-paragraph, 7 not in the corpus, 5 adversarial.
+- Results file: `results/eval_baseline_20261028_2234.csv`.
+
+**Result: 82% correct (33/40, partial = 0.5); 0 hallucinations.**
+
+| Metric | Result |
+|---|---|
+| Correct (partial = 0.5) | 82% (33/40) |
+| Fully correct | 78% (31/40) |
+| Correct refusals (out-of-corpus) | 100% (8/8) |
+| False refusals (answerable but refused) | 9% (3/32) |
+| Citation accurate (manual) | 100% (29/29) |
+| Hallucination rate (manual) | 0% (0/40) |
+| Retrieval: expected para sent to Claude | 88% (28/32); rank 1 in 22 |
+| Latency median / p95 | 2.8s / 6.1s |
+| Avg tokens in / out | 2565 / 277 |
+
+| Category | Correct | Questions |
+|---|---|---|
+| single | 82% (15.5/19) | 19 |
+| multi | 83% (7.5/9) | 9 |
+| not_found | 100% (7/7) | 7 |
+| adversarial | 60% (3/5) | 5 |
+
+**Observations**
+- Retrieval missed the expected paragraph on S05, S11, S13 and A05. Low-rank hits: M04 (rank 5), S17 (rank 4).
+- Adversarial is the weakest category. A02 and A04 were flagged by the auto-check even though their paragraph was retrieved at rank 1, so the issue there is likely the answer, not retrieval.
+- The auto-check flagged N03, N04, N05 and A01 as "answered", but hand grading scored 8/8 correct refusals. The auto-check's refusal detection probably misses some refusal wordings.
