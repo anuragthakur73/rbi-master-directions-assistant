@@ -170,3 +170,34 @@ By category (iter 2): single 95%, multi 83%, not-found 100%, adversarial 100%.
 **Candidates for v3 / later:** let partial answers through ("answer the part the excerpts cover, then say which part is not found"); add "do not add consequences or advice the excerpts don't state". Retrieval: query rewriting or synonym expansion for wording gaps; merge heading-only chunks such as Para 170F with their sub-paragraphs.
 
 **Caution:** the same 40 questions were used to find and fix problems, so these scores are likely optimistic. A fresh set of 10-15 unseen questions would give a fairer check before the retrospective.
+
+---
+
+## 29 Oct 2026: Holdout check - 15 unseen questions (final Week 3 setup)
+
+**Setup:** hybrid retrieval + system prompt v2 + claude-sonnet-5-5 (effort medium, top 5 paragraphs), unchanged from Iteration 2. `tests/test_set_holdout.csv`: 15 questions written after tuning, on paragraphs the 40-question set never asked about (7 single, 4 multi, 2 not-found, 2 adversarial). Run once and graded by hand; nothing was changed because of these results.
+
+**Result:** `results/eval_holdout_20261029_0032.csv`
+
+| Metric | Tuned set (40 q, Iter 2) | Holdout (15 q) |
+|---|---|---|
+| Correct (partial = 0.5) | 94% | **83% (12.5/15)** |
+| Fully correct | 92% | 80% (12/15) |
+| Correct refusals | 100% | 100% (2/2) |
+| False refusals | 6% | 15% (2/13) |
+| Citation accurate | 100% | 100% |
+| Hallucination rate | 2.5% | 0% |
+| Median / p95 latency | 3.4s / 7.2s | 2.8s / 4.1s |
+
+By category (holdout): single 71% (5/7), multi 88%, not-found 100%, adversarial 100%.
+
+**What held up on unseen questions:** no hallucinations; both out-of-corpus questions refused; both adversarial questions handled (refused an "authorised" request to skip the documents and confirm 95% LTV; corrected a false premise on gold LTV). Prompt v2's rule 4 worked on new cases: H10 "3.6:1 exceeds the 3:1 ceiling, max debt ₹750 crore"; H08 "₹30 lakh exceeds the ₹25 lakh limit".
+
+**All three misses were retrieval, not the model:**
+- H05: the guarantee paragraph (219X) was retrieved but the collateral rule (219Y, 50% with 25% in cash) was not, leading to a false refusal. The auto "retrieval hit" counted 219X, so the 92% retrieval figure overstates this case.
+- H06: Para 429 (BBB minus) not retrieved; its neighbour Para 430 was. False refusal.
+- H08 (partial): Para 219K (₹1 crore cap) not retrieved, so it could not confirm the overall amount.
+
+**Reading:** the 11-point gap between the tuned set (94%) and the holdout (83%) is the expected optimism from tuning on the same questions. 15 questions is a small sample (one question = 6.7 points), so treat 83% as indicative. **Report ~83% on unseen questions as the headline number**, with 94% on the tuned set alongside. Accuracy on unseen questions is still close to the PRD target (≥ 85%); the gap is mostly retrieval.
+
+**Pattern for V2 / later:** the answer is often in the paragraph *next to* the one retrieved (219X → 219Y, 430 → 429, 219L → 219K). Candidate fix: also fetch neighbouring paragraphs (±1) of top hits, or chunk sub-paragraph series (e.g. 219J-219L, 170F-170L) together. Test it on the 40-question set first, then on a *new* holdout set, since this one has now been seen.

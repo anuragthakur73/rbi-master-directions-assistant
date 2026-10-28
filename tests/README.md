@@ -45,3 +45,18 @@ python scripts/score_eval.py results/eval_baseline_<date>.csv results/eval_promp
 ```
 
 Change one thing per run (prompt, k, retrieval method), give it its own `--label`, and paste each summary into `docs/eval_log.md`.
+
+## Holdout set (`test_set_holdout.csv`)
+
+15 questions written after Week 3's tuning, on paragraphs the v1 set never asked about (only H14 reuses Para 111, in a new adversarial scenario). They were **not run during tuning**, so they give a fairer score for the final setup (hybrid retrieval + prompt v2). Run them once, score by hand, and don't change anything because of them before reporting the number.
+
+| Category | Count |
+|---|---|
+| single | 7 |
+| multi | 4 |
+| not_found | 2 |
+| adversarial | 2 |
+
+```
+python scripts/run_eval.py --label holdout --test-set holdout
+```

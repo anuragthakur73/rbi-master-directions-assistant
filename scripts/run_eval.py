@@ -11,6 +11,7 @@ Run from the repo root:
   python scripts/run_eval.py --label baseline --ids S01,M02,A04    only some questions
   python scripts/run_eval.py --label semantic --retrieval semantic   re-run with Week 2 retrieval
   python scripts/run_eval.py --label prompt_v2 --prompt v2           use prompts/system_prompt_v2.md
+  python scripts/run_eval.py --label holdout --test-set holdout      use tests/test_set_holdout.csv
 
 Then open the results CSV in Excel, fill the four "manual_" columns, save, and run
   python scripts/score_eval.py results/<that file>.csv
@@ -114,6 +115,8 @@ def auto_verdict(case: dict, row: dict) -> str:
 
 
 def load_cases(ids: str | None) -> list[dict]:
+    if not TEST_SET.exists():
+        raise SystemExit(f"Test set not found: {TEST_SET}")
     with TEST_SET.open(encoding="utf-8-sig", newline="") as f:
         cases = list(csv.DictReader(f))
     if ids:
@@ -129,8 +132,11 @@ def main() -> None:
     parser.add_argument("--retrieval-only", action="store_true", help="check retrieval only; no API calls, no cost")
     parser.add_argument("--retrieval", choices=["semantic", "hybrid"],
                         help="override RETRIEVAL_MODE in answer.py for this run")
+    parser.add_argument("--test-set", default="v1", help="test set name: v1 -> tests/test_set_v1.csv, holdout -> tests/test_set_holdout.csv")
     parser.add_argument("--prompt", help="system prompt version for this run, e.g. v2 -> prompts/system_prompt_v2.md")
     args = parser.parse_args()
+    global TEST_SET
+    TEST_SET = ROOT / "tests" / f"test_set_{args.test_set}.csv"
     if args.retrieval:
         engine.RETRIEVAL_MODE = args.retrieval
     if args.prompt:
