@@ -1,0 +1,16 @@
+source,find,replace,reason
+CB_Credit_Information_Reporting_2025,"₹30, 0007","₹30,000",footnote 7 fused to amount (Annex III Table 1 heading)
+CB_Credit_Information_Reporting_2025,"₹30,00013","₹30,000",footnote 13 fused to amount (Annex III Table 2 heading)
+CB_Credit_Information_Reporting_2025,"Table 317:","Table 3:",footnote 17 fused to table number (Annex III)
+CB_Credit_Information_Reporting_2025,"1A CI shall keep","A CI shall keep",footnote 1 fused to text (Para 10(2)) - looks like a paragraph label
+CB_Credit_Information_Reporting_2025,"2A CI shall report","A CI shall report",footnote 2 fused to text (Para 12(10)) - looks like a paragraph label
+CB_Credit_Information_Reporting_2025,"3A CI shall rectify","A CI shall rectify",footnote 3 fused to text (Para 15) - looks like a paragraph label
+CB_Credit_Information_Reporting_2025,"SHG members6","SHG members",footnote 6 fused to text (Annex III heading)
+CB_Credit_Information_Reporting_2025,"Passport8","Passport",footnote 8 fused to text (Annex III Table 1)
+CB_Credit_Information_Reporting_2025,"Passport14","Passport",footnote 14 fused to text (Annex III Table 2)
+CB_Credit_Information_Reporting_2025,"basis9","basis",footnote 9 fused to text (Annex III Table 1)
+CB_Credit_Information_Reporting_2025,"basis15","basis",footnote 15 fused to text (Annex III Table 2)
+CB_Credit_Information_Reporting_2025,"related information10","related information",footnote 10 fused to text (Annex III Table 1)
+CB_Credit_Information_Reporting_2025,"information16 related","information related",footnote 16 fused to text (Annex III Table 2)
+CB_Credit_Information_Reporting_2025,"to the SHG12","to the SHG",footnote 12 fused to text (Annex III Table 1)
+CB_Credit_Risk_Management_2025,"October 0 1, 2026","October 01, 2026",stray space inside a date (footnote 19)
