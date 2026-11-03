@@ -20,13 +20,14 @@ import os
 import re
 import sys
 import time
+from functools import lru_cache
 from pathlib import Path
 
 import anthropic
 from dotenv import load_dotenv
 
 from embed_store import search          # same embedding model and settings as Step 4
-from keyword_search import keyword_search, lookup   # Week 3: keyword search + paragraph lookup
+from keyword_search import keyword_search, load_chunks, lookup   # Week 3: keyword search + paragraph lookup
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -43,6 +44,9 @@ RETRIEVAL_MODE = "hybrid"       # "semantic" = Week 2 baseline (embeddings only)
                                 # "hybrid"   = Week 3: + paragraph lookup + keyword (BM25) search, merged by rank
 K_KEYWORD = 10                  # chunks fetched by keyword search in hybrid mode
 RRF_K = 60                      # standard constant for merging two ranked lists (reciprocal rank fusion)
+NEIGHBOURS = 0                  # Week 4 candidate: also send the paragraph just before and after each top hit
+                                # (0 = off, the Week 3 setup). See docs/eval_log.md, "neighbour paragraphs".
+NEIGHBOUR_TOP = 3               # ...but only for the top N retrieved paragraphs, to limit extra tokens
 
 # Short names match the citation style in the system prompt: [Credit Facilities, Para 44]
 SHORT_NAMES = {
@@ -103,11 +107,48 @@ def retrieve(question: str) -> list[dict]:
                 continue
             groups[key] = {**hit, "best_similarity": hit["similarity"], "parts_text": {}}
         groups[key]["parts_text"][hit["part"]] = hit["text"]
+    if NEIGHBOURS:
+        add_neighbours(groups)
     excerpts = []
-    for g in groups.values():                     # dict keeps best-first order
+    for g in groups.values():                     # dict keeps best-first order; neighbours come last
         g["text"] = "\n...\n".join(g["parts_text"][p] for p in sorted(g["parts_text"]))
         excerpts.append(g)
     return excerpts
+
+
+def add_neighbours(groups: dict) -> None:
+    """Add the paragraph just before and after each of the top NEIGHBOUR_TOP paragraphs, whole,
+    if it is in the same chapter. Why: in the Week 3 holdout, all three misses had the answer in the
+    paragraph next to the one retrieved (219X -> 219Y, 430 -> 429, 219L -> 219K).
+    Neighbours are added after the normal top K_PARAS, marked with similarity 'neighbour'."""
+    order, chunks_by_para = paragraph_order()
+    anchors = list(groups)[:NEIGHBOUR_TOP]
+    for key in anchors:
+        i = order.index(key)
+        for j in range(i - NEIGHBOURS, i + NEIGHBOURS + 1):
+            if j == i or not 0 <= j < len(order) or order[j] in groups:
+                continue
+            nb_chunks = chunks_by_para[order[j]]
+            if nb_chunks[0]["chapter"] != chunks_by_para[key][0]["chapter"]:
+                continue                          # don't cross into another chapter
+            first = nb_chunks[0]
+            groups[order[j]] = {**first, "similarity": "neighbour", "best_similarity": "neighbour",
+                                "parts_text": {c["part"]: c["text"] for c in nb_chunks}}
+
+
+@lru_cache(maxsize=1)
+def paragraph_order() -> tuple[list[tuple], dict]:
+    """Paragraphs in document order, and all chunks of each paragraph, from data/processed/chunks.jsonl.
+    Page numbers use -1 for 'unknown', as in the Chroma metadata, so build_documents() works unchanged."""
+    order, by_para = [], {}
+    for c in load_chunks():
+        key = (c["source"], c["para"])
+        if key not in by_para:
+            order.append(key)
+            by_para[key] = []
+        by_para[key].append({**c, "page_start": c["page_start"] if c["page_start"] is not None else -1,
+                             "page_end": c["page_end"] if c["page_end"] is not None else -1})
+    return order, by_para
 
 
 def build_documents(excerpts: list[dict]) -> str:

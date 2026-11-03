@@ -201,3 +201,29 @@ By category (holdout): single 71% (5/7), multi 88%, not-found 100%, adversarial 
 **Reading:** the 11-point gap between the tuned set (94%) and the holdout (83%) is the expected optimism from tuning on the same questions. 15 questions is a small sample (one question = 6.7 points), so treat 83% as indicative. **Report ~83% on unseen questions as the headline number**, with 94% on the tuned set alongside. Accuracy on unseen questions is still close to the PRD target (≥ 85%); the gap is mostly retrieval.
 
 **Pattern for V2 / later:** the answer is often in the paragraph *next to* the one retrieved (219X → 219Y, 430 → 429, 219L → 219K). Candidate fix: also fetch neighbouring paragraphs (±1) of top hits, or chunk sub-paragraph series (e.g. 219J-219L, 170F-170L) together. Test it on the 40-question set first, then on a *new* holdout set, since this one has now been seen.
+
+---
+
+## 3 Nov 2026: Week 4 prep - neighbour paragraphs (retrieval only) and a fresh test set
+
+**Change tested (one variable, retrieval only, no API calls):** `NEIGHBOURS = 1` in `answer.py` also sends the paragraph before and after each of the top 3 retrieved paragraphs (same chapter only), after the usual top 5. This is the candidate fix from the holdout check (219X → 219Y, 430 → 429, 219L → 219K).
+
+**New measure:** `retrieval_all` = every expected paragraph was sent, not just one. The old `retrieval_hit` counted H05 as a hit although the answer paragraph (219Y) was missing.
+
+**New test set:** `tests/test_set_fresh.csv`, 16 questions on randomly chosen paragraphs (seed 20261103) that no earlier question used. Only retrieval was checked; nothing was changed because of it.
+
+| Test set | Neighbours off: all expected sent | Neighbours on (top 3): all expected sent | Excerpt text sent (mean characters) |
+|---|---|---|---|
+| v1 (40 q, tuned) | 27/32 | 29/32 (M04, M08 fixed) | 6,016 → 8,765 (+46%) |
+| Holdout (15 q, now seen) | 10/13 | 13/13 (H05, H06, H08 fixed) | 4,920 → 7,305 |
+| Fresh (16 q, unseen) | 12/14 | 12/14 (no change) | |
+
+Other settings tried: neighbours of the top 1 only (holdout 12/13, v1 28/32, +15% text); of all top 5 (v1 30/32, +76% text).
+
+**Reading:** the fix works on the cases it was designed from, but makes no difference on fresh questions, whose two misses (F06: CF 219ZE, F15: CF 47) are not neighbour cases. The holdout improvement is mostly the same optimism as tuning on a test set.
+
+**Decision:** keep `NEIGHBOURS = 0` as the default. Next, run the full answer evaluation on the fresh set with neighbours off and on (`--test-set fresh --neighbours 1`, about 32 API calls), grade by hand, and switch it on only if answer quality improves enough to justify about 46% more excerpt text.
+
+**Environment note:** these checks ran outside the laptop (Python 3.13, fastembed 0.9.1, the same Chroma store and chunks). The baseline gave 30/32 for "expected paragraph sent" instead of the 31/32 logged on 29 Oct: S13 (CF 215) dropped from rank 2 to just outside the top 5. Small numeric differences between library versions can do this. All comparisons above were made in the same environment. To confirm on the laptop (free): `python scripts/run_eval.py --retrieval-only` and `python scripts/run_eval.py --retrieval-only --neighbours 1`.
+
+**Also added:** prompt v3 candidate (`prompts/system_prompt_v3.md`: partial answers allowed; no unstated consequences), `scripts/second_grader.py` (blind second grading + agreement), `docs/user_evidence_plan.md` and `tests/real_questions_template.csv`. None of these change the reported Week 3 numbers.

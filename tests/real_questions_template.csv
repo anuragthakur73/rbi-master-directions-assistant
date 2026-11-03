@@ -1,0 +1,2 @@
+id,category,expected_behavior,question,expected_answer,expected_sources,must_include,notes,who_asked_role,how_collected,date_collected
+R01,single,answer,"(their exact words, e.g. LTV for 25L flat?)","(fill from the PDF)",CF 111,,"(optional)","e.g. retail credit officer, other bank","conversation / own recall / forum",

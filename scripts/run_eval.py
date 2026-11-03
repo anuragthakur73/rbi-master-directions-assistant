@@ -12,6 +12,8 @@ Run from the repo root:
   python scripts/run_eval.py --label semantic --retrieval semantic   re-run with Week 2 retrieval
   python scripts/run_eval.py --label prompt_v2 --prompt v2           use prompts/system_prompt_v2.md
   python scripts/run_eval.py --label holdout --test-set holdout      use tests/test_set_holdout.csv
+  python scripts/run_eval.py --label haiku --model claude-haiku-5-5  Week 4: same questions, another model
+  python scripts/run_eval.py --retrieval-only --label nb1 --neighbours 1   also send the paragraphs either side of top hits
 
 Then open the results CSV in Excel, fill the four "manual_" columns, save, and run
   python scripts/score_eval.py results/<that file>.csv
@@ -44,9 +46,9 @@ SOURCE_ABBR = {"CB_Credit_Facilities_2025": "CF", "CB_Credit_Information_Reporti
 
 MANUAL_COLS = ["manual_correct", "manual_citation_ok", "manual_hallucination", "manual_notes"]
 FIELDS = ["id", "category", "expected_behavior", "question", "expected_answer", "expected_sources",
-          "answer", "retrieved", "retrieval_hit", "retrieval_rank", "refused", "facts_found", "cited_expected",
+          "answer", "retrieved", "retrieval_hit", "retrieval_rank", "retrieval_all", "refused", "facts_found", "cited_expected",
           "auto_verdict", *MANUAL_COLS,
-          "model", "effort", "k_paras", "system_prompt", "retrieval_mode", "total_seconds", "input_tokens", "output_tokens",
+          "model", "effort", "k_paras", "system_prompt", "retrieval_mode", "neighbours", "total_seconds", "input_tokens", "output_tokens",
           "thinking_tokens", "stop_reason", "error"]
 
 
@@ -78,13 +80,15 @@ def expected_list(sources: str) -> list[tuple[str, str]]:
     return out
 
 
-def retrieval_rank(question: str, expected: list[tuple[str, str]]) -> int | None:
-    """Rank (1 = best) of the first expected paragraph among the distinct paragraphs sent to Claude."""
-    excerpts = engine.retrieve(question)
-    for rank, ex in enumerate(excerpts, start=1):
-        if (SOURCE_ABBR.get(ex["source"]), ex["para"]) in expected:
-            return rank
-    return None
+def retrieval_check(question: str, expected: list[tuple[str, str]]) -> tuple[int | None, str]:
+    """Rank (1 = best) of the first expected paragraph among the distinct paragraphs sent to Claude,
+    and whether ALL expected paragraphs were sent ("yes", or "no (missing: CF 219Y)").
+    The rank alone can overstate success: in the Week 3 holdout, H05 counted as a hit because CF 219X
+    was retrieved, but the answer was in CF 219Y, which was not."""
+    sent = [(SOURCE_ABBR.get(ex["source"]), ex["para"]) for ex in engine.retrieve(question)]
+    rank = next((r for r, key in enumerate(sent, start=1) if key in expected), None)
+    missing = [f"{a} {p}" for a, p in expected if (a, p) not in sent]
+    return rank, ("yes" if not missing else "no (missing: " + ", ".join(missing) + ")")
 
 
 def cited_expected(answer_text: str, expected: list[tuple[str, str]]) -> str:
@@ -133,12 +137,23 @@ def main() -> None:
     parser.add_argument("--retrieval", choices=["semantic", "hybrid"],
                         help="override RETRIEVAL_MODE in answer.py for this run")
     parser.add_argument("--test-set", default="v1", help="test set name: v1 -> tests/test_set_v1.csv, holdout -> tests/test_set_holdout.csv")
+    parser.add_argument("--model", help="override MODEL in answer.py, e.g. claude-haiku-5-5 or claude-opus-5-5")
+    parser.add_argument("--effort", choices=["low", "medium", "high", "xhigh", "max"],
+                        help="override EFFORT in answer.py (keep it the same across models for a fair comparison)")
+    parser.add_argument("--neighbours", type=int, choices=[0, 1],
+                        help="override NEIGHBOURS in answer.py: 1 = also send the paragraph before and after top hits")
     parser.add_argument("--prompt", help="system prompt version for this run, e.g. v2 -> prompts/system_prompt_v2.md")
     args = parser.parse_args()
     global TEST_SET
     TEST_SET = ROOT / "tests" / f"test_set_{args.test_set}.csv"
     if args.retrieval:
         engine.RETRIEVAL_MODE = args.retrieval
+    if args.model:
+        engine.MODEL = args.model
+    if args.effort:
+        engine.EFFORT = args.effort
+    if args.neighbours is not None:
+        engine.NEIGHBOURS = args.neighbours
     if args.prompt:
         engine.SYSTEM_PROMPT_FILE = engine.ROOT / "prompts" / f"system_prompt_{args.prompt}.md"
         engine.load_system_prompt()          # fail now, not after the first API call, if the file is missing
@@ -156,10 +171,10 @@ def main() -> None:
     rows = []
     for n, case in enumerate(cases, start=1):
         expected = expected_list(case["expected_sources"])
-        rank = retrieval_rank(case["question"], expected) if expected else None
+        rank, all_sent = retrieval_check(case["question"], expected) if expected else (None, "n/a")
         row = {k: case[k] for k in ("id", "category", "expected_behavior", "question", "expected_answer", "expected_sources")}
-        row.update({"retrieval_rank": rank or "", "model": engine.MODEL, **settings,
-                    "retrieval_mode": engine.RETRIEVAL_MODE,
+        row.update({"retrieval_rank": rank or "", "retrieval_all": all_sent, "model": engine.MODEL, **settings,
+                    "retrieval_mode": engine.RETRIEVAL_MODE, "neighbours": engine.NEIGHBOURS,
                     "retrieval_hit": "n/a" if not expected else ("yes" if rank else "no")})
 
         if not args.retrieval_only:
@@ -186,7 +201,7 @@ def main() -> None:
         rows.append(row)
         status = row.get("auto_verdict", f"retrieval {'hit @' + str(rank) if rank else ('miss' if expected else 'n/a')}")
         print(f"[{n:>2}/{len(cases)}] {case['id']:<4} {status}")
-    print(f"\nRetrieval mode: {engine.RETRIEVAL_MODE}")
+    print(f"\nRetrieval mode: {engine.RETRIEVAL_MODE}, neighbours: {engine.NEIGHBOURS}")
 
     with out_file.open("w", newline="", encoding="utf-8-sig") as f:   # utf-8-sig so Excel shows ₹
         writer = csv.DictWriter(f, fieldnames=FIELDS)
@@ -197,7 +212,8 @@ def main() -> None:
     hits = sum(r["retrieval_hit"] == "yes" for r in answerable)
     top1 = sum(str(r["retrieval_rank"]) == "1" for r in answerable)
     print(f"\nRetrieval: expected paragraph sent to Claude in {hits}/{len(answerable)} answerable questions "
-          f"(rank 1 in {top1}).")
+          f"(rank 1 in {top1}); all expected paragraphs sent in "
+          f"{sum(r['retrieval_all'] == 'yes' for r in answerable)}/{len(answerable)}.")
     if not args.retrieval_only:
         passes = sum(r["auto_verdict"] == "pass" for r in rows)
         print(f"Auto-check: {passes}/{len(rows)} pass; the rest need your review.")

@@ -100,7 +100,13 @@ def ask(question: str) -> dict | None:
 with st.sidebar:
     st.header("Credit Assist")
     st.markdown("Answers questions from three public RBI directions, citing the paragraph:")
-    st.markdown("- Credit Facilities, 2025\n- Credit Information Reporting, 2025\n- Credit Risk Management, 2025")
+    # Show how current each direction is ("updated as on" date from the PDF), so staff know what the answers reflect
+    updated = {}
+    for c in engine.load_chunks():
+        updated.setdefault(c["source"], c["updated_as_on"])
+    st.markdown("\n".join(f"- {engine.SHORT_NAMES.get(src, src)}, updated as on {date}"
+                          for src, date in updated.items()))
+    st.caption("RBI amends directions from time to time. The README explains how to check for and load updates.")
     st.caption(f"Model: {engine.MODEL} · effort {engine.EFFORT} · top {engine.K_PARAS} paragraphs")
     st.caption("Every question is logged to logs/qa_log.csv.")
     if st.button("Clear chat", width="stretch"):
