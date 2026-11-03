@@ -18,13 +18,13 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from score_eval import load, summarise
+from score_eval import CATEGORIES, load, summarise
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = Path(__file__).resolve().parent.parent
 PRICES_SOURCE = "https://platform.claude.com/docs/en/about-claude/pricing"
-PRICES_CHECKED = "2026-10-29"
+PRICES_CHECKED = "2026-11-03"   # re-checked: unchanged since 2026-10-29
 # USD per million tokens, standard API (no batch, no caching, global data residency).
 # Haiku 5.5 is tiered by prompt length: prompts over 100,000 tokens pay the higher rate.
 PRICES = {
@@ -34,6 +34,11 @@ PRICES = {
     "claude-opus-5-5": {"input": 4.00, "output": 20.00},
 }
 USD_TO_INR = None   # optional: set a rate (e.g. from RBI's reference rate on the day) to add a ₹ column
+
+# Scale estimate for the write-up. These are ASSUMPTIONS, not measurements: change them and say so.
+QUERIES_PER_USER_PER_DAY = 3      # assumption: a branch officer checks ~3 rules a working day
+USERS_PER_DAY = 10_000            # the guide's "10,000 users per day" scenario
+WORKING_DAYS_PER_MONTH = 22
 
 
 def query_cost(model: str, input_tokens: int, output_tokens: int) -> float:
@@ -73,6 +78,7 @@ def analyse(path: Path) -> dict:
         "think_avg": statistics.mean(thinking) if thinking else 0,
         "cost_per_1000": 1000 * statistics.mean(costs) if costs else None,
         "effort": s["config"].get("effort", ""),
+        "by_cat": s["by_cat"],
     }
 
 
@@ -102,11 +108,40 @@ def table(results: list[dict]) -> str:
     return "\n".join(lines + notes)
 
 
+def category_table(results: list[dict]) -> str:
+    """Correct answers per question type and model: the evidence for (or against) routing."""
+    head = ["Question type"] + [f"{r['model']} ({r['effort']})" for r in results]
+    lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
+    for c in CATEGORIES:
+        cells = [c]
+        for r in results:
+            got, graded, total = r["by_cat"].get(c, (0, 0, 0))
+            cells.append(f"{got:g}/{graded}" + (f" ({total - graded} not scored)" if total > graded else "") if total else "-")
+        lines.append("| " + " | ".join(cells) + " |")
+    lines.append("\nPartial = 0.5. Routing only makes sense if a cheaper model matches the larger one on a whole question "
+                 "type (e.g. single-paragraph lookups) AND the type can be told apart before answering.")
+    return "\n".join(lines)
+
+
+def scale_table(results: list[dict]) -> str:
+    q_month = QUERIES_PER_USER_PER_DAY * USERS_PER_DAY * WORKING_DAYS_PER_MONTH
+    lines = [f"Estimate, not a measurement: {USERS_PER_DAY:,} users x {QUERIES_PER_USER_PER_DAY} queries a day x "
+             f"{WORKING_DAYS_PER_MONTH} working days = {q_month:,} queries a month, at the per-query cost measured above.",
+             "", "| Model | Est. API cost per month (USD) |", "|---|---|"]
+    for r in results:
+        if r["cost_per_1000"] is not None:
+            lines.append(f"| {r['model']} ({r['effort']}) | ${r['cost_per_1000'] * q_month / 1000:,.0f} |")
+    lines.append("\nExcludes hosting, embeddings (run locally), retries and the Batch API / caching discounts.")
+    return "\n".join(lines)
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
     results = [analyse(Path(p)) for p in sys.argv[1:]]
-    text = "### Model comparison\n\n" + table(results)
+    text = ("### Model comparison\n\n" + table(results)
+            + "\n\n### Correct by question type\n\n" + category_table(results)
+            + "\n\n### Scale estimate\n\n" + scale_table(results))
     print(text)
     out = ROOT / "results" / f"model_comparison_{date.today():%Y%m%d}.md"
     out.parent.mkdir(exist_ok=True)
