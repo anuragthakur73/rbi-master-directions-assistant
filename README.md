@@ -19,7 +19,7 @@ Corpus: RBI (Commercial Banks) Credit Facilities, Credit Information Reporting a
 
 ## Results (Week 3)
 
-Hand-graded. Model `claude-sonnet-5-5`, effort medium, hybrid retrieval, system prompt v2.
+Hand-graded. Model `claude-sonnet-5-5` (Week 3 model; Week 4 switched to Haiku 5.5 at the same accuracy, see Status), effort medium, hybrid retrieval, system prompt v2.
 
 | Metric | Unseen questions (holdout, 15) | Tuned test set (40) | PRD target |
 |---|---|---|---|
@@ -54,7 +54,7 @@ flowchart LR
     K --> F
     L --> T[Top 5 paragraphs<br/>parts grouped]
     F --> T
-    T --> C[Claude Sonnet 5.5<br/>system prompt v2]
+    T --> C[Claude Haiku 5.5<br/>system prompt v2]
     C --> A[Cited answer<br/>or 'Not found']
 ```
 
@@ -122,6 +122,7 @@ Public RBI Master Directions only, listed in `data/manifest.csv`. Never used: in
 ## Status
 
 - Weeks 1–3 complete: setup, prototype (CLI + Streamlit), 40-question evaluation with two iterations, and a holdout check.
-- Week 4 (next): model comparison (Haiku / Sonnet / Opus), fresh-set evaluation of neighbour paragraphs and prompt v3, real-question set.
+- Week 4: model comparison on the 40-question set. Haiku 5.5, Sonnet 5.5 and Opus 5.5 all scored 94%; Opus missed the latency and cost targets. Haiku matched Sonnet on the holdout set too (83%, no hallucinations), at about $0.57 per 1,000 queries vs $8.65. **Default model switched to Haiku 5.5.** Details: `docs/eval_log.md`, `docs/week4_plan.md`.
+- Next: fresh-set evaluation of neighbour paragraphs and prompt v3, real-question set from credit staff.
 
 License: see `LICENSE`.

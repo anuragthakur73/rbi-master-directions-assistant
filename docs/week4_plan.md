@@ -85,3 +85,58 @@ Template, to fill only with your own numbers:
 
 - **Effort as a lever:** if Haiku misses mainly on multi-paragraph questions, run `--model claude-haiku-5-5 --effort high` once. It is still far cheaper than Sonnet and shows a PM trade-off (thinking vs model size).
 - **Re-run variance:** run the chosen model a second time. If the score moves by 2 to 3 questions, say that differences that small between models are not meaningful on 40 questions.
+
+
+---
+
+## Week 4 results and decision (5 Nov 2026)
+
+> **Draft by Claude from the results in `docs/eval_log.md`. Review it and rewrite it in your own words before it goes into the README or an interview.**
+
+### Decision rule check
+
+| Threshold (set before the results) | Sonnet 5.5 | Haiku 5.5 | Opus 5.5 |
+|---|---|---|---|
+| Correct ≥ 85% | ✓ 94% | ✓ 94% | ✓ 94% |
+| Hallucinations ≤ 2 of 40 | ✓ 1 | ✓ 0 | ✓ 0 |
+| All 8 refusals correct | ✓ 8/8 | ✓ 8/8 | ✓ 8/8 |
+| p95 latency < 8 s | ✓ 7.2 s | ✓ 6.7 s | ✗ 10.6 s |
+| Cost < ₹1 a query | ✓ ₹0.82 | ✓ ₹0.05 | ✗ ₹1.97 |
+
+Passes all thresholds: Sonnet and Haiku. The cheaper one is Haiku. On multi-paragraph questions both score 7.5/9, so the tie-break doesn't apply. **Result under the rule: Haiku 5.5.**
+
+### 1. Choice
+
+Claude Haiku 5.5 at medium effort.
+
+**Confirmed on the holdout set (6 Nov 2026):** Haiku scored 12.5/15 (83%), the same as Sonnet, with 0 hallucinations and both refusals correct. Same three misses as Sonnet (H05, H06, H08), all retrieval failures. Default switched to Haiku in `scripts/answer.py`.
+
+Original reasoning: It is the cheapest model that met every PRD threshold: $0.57 vs $8.65 per 1,000 queries for Sonnet, with the same 94% correct and no hallucinations. Because the 40-question set was used for tuning, the switch should wait for one more check: run Haiku on the holdout set (15 questions; Sonnet scored 83% there) and switch only if it scores within a question of Sonnet.
+
+```
+python scripts/run_eval.py --label holdout_haiku --test-set holdout --model claude-haiku-5-5 --effort medium
+```
+
+### 2. Routing
+
+Not worth it now. All three models score the same on every question type, so there is no type that needs a bigger model. Routing would add a classifier, a second model and another failure point for no measured gain. Revisit it only if a larger test set shows a gap on multi-paragraph questions.
+
+### 3. Cost levers
+
+- **Input** is about 2,880 tokens a query, mostly the 5 retrieved paragraphs. On Haiku, input and output each make up about half the cost, and thinking is about two-thirds of the output. So the two levers are:
+  - **Thinking:** try `--effort low` on Haiku and check whether accuracy holds.
+  - **Excerpt length:** cap the text per paragraph, or send fewer paragraphs.
+- **Prompt caching:** little benefit expected (my inference). Only the ~420-word system prompt repeats between questions; the excerpts change every time. Check the caching docs before claiming this.
+- **Batch API (50% off):** not usable, because users need live answers. It would suit offline evaluation runs.
+- The biggest quality lever is not the model: the remaining misses are all retrieval.
+
+### 4. At 10,000 users a day (estimate, not a measurement)
+
+At an assumed 3 queries per user per working day, Haiku's API cost is about $378 a month, vs about $5,709 for Sonnet and $13,728 for Opus. At that scale the model bill stops being the main concern. These would matter more (my judgement):
+- latency and rate limits under load
+- monitoring answer quality on a weekly graded sample, so a model update or a new RBI amendment doesn't quietly reduce accuracy
+- keeping the corpus current as RBI amends the Directions
+
+### Write-up paragraph (draft)
+
+> I ran the same 40-question test set through Claude Haiku 5.5, Sonnet 5.5 and Opus 5.5 at medium effort, with retrieval and prompt fixed. All three scored 94% correct; Haiku had no hallucinations at $0.57 per 1,000 queries (about 5 paise a query) and a p95 latency of 6.7 s, against $8.65 and 7.2 s for Sonnet, while Opus missed the latency and cost targets. I chose Haiku because it was the cheapest model to meet every PRD threshold, and no larger model did better on multi-paragraph questions. The trade-off I accepted is a decision based on only 40 questions that were used for tuning, so I confirmed it on a 15-question holdout set, where Haiku again matched Sonnet (83%, no hallucinations). The surprise was that the three remaining misses were identical for every model and all were retrieval failures: a bigger model would not have fixed them.

@@ -227,3 +227,88 @@ Other settings tried: neighbours of the top 1 only (holdout 12/13, v1 28/32, +15
 **Environment note:** these checks ran outside the laptop (Python 3.13, fastembed 0.9.1, the same Chroma store and chunks). The baseline gave 30/32 for "expected paragraph sent" instead of the 31/32 logged on 29 Oct: S13 (CF 215) dropped from rank 2 to just outside the top 5. Small numeric differences between library versions can do this. All comparisons above were made in the same environment. To confirm on the laptop (free): `python scripts/run_eval.py --retrieval-only` and `python scripts/run_eval.py --retrieval-only --neighbours 1`.
 
 **Also added:** prompt v3 candidate (`prompts/system_prompt_v3.md`: partial answers allowed; no unstated consequences), `scripts/second_grader.py` (blind second grading + agreement), `docs/user_evidence_plan.md` and `tests/real_questions_template.csv`. None of these change the reported Week 3 numbers.
+
+
+---
+
+## 5 Nov 2026: Week 4 model comparison
+
+**Change (one variable):** the model. Setup fixed: test set v1 (40 questions), hybrid retrieval, top 5 paragraphs, prompt v2, effort medium, neighbours off. Sonnet = the Week 3 prompt v2 run (`eval_prompt_v2_20261029_0020.csv`); Haiku = `eval_haiku_20261105_1424.csv`; Opus = `eval_opus_20261105_1427.csv`.
+
+**Grading:** Sonnet and Haiku graded by me. Opus graded by Claude against the expected answers and the source paragraph text; every note is prefixed "Claude-graded:". Claude re-checked M04, M05, M08, A02 and S07 against the text. **My own spot-check of the Opus grades is still to do.** Haiku M04 changed from no to partial, to match its note and the Opus grade for the same miss (README rule: right but missing a condition = partial).
+
+**Known bias:** prompt v2 was tuned on Sonnet's Week 3 answers.
+
+**Prices:** Claude pricing page, checked 3 Nov 2026, standard API. ₹ column at RBI reference rate ₹94.8416/USD (4 Nov 2026).
+
+#### Model comparison
+
+| Model | Correct | Correct refusals | False refusals | Hallucinations | Median / p95 latency | Avg tokens in / out (thinking) | Cost per 1,000 queries (USD) | (₹) |
+|---|---|---|---|---|---|---|---|---|
+| claude-sonnet-5-5 (medium) | 94% | 8/8 | 2/32 | 1/40 | 3.4s / 7.2s | 2,880 / 289 (42) | $8.65 | ₹820 |
+| claude-haiku-5-5 (medium) | 94% | 8/8 | 1/32 | 0/40 | 2.5s / 6.7s | 2,880 / 569 (372) | $0.57 | ₹54 |
+| claude-opus-5-5 (medium) | 94% | 8/8 | 1/32 | 0/40 | 5.6s / 10.6s | 2,874 / 465 (174) | $20.80 | ₹1,973 |
+
+Prices: https://platform.claude.com/docs/en/about-claude/pricing (checked 2026-11-03), standard API, no caching or batch discount.
+Cost per query = input tokens x input price + output tokens (including thinking) x output price.
+
+#### Correct by question type
+
+| Question type | claude-sonnet-5-5 (medium) | claude-haiku-5-5 (medium) | claude-opus-5-5 (medium) |
+|---|---|---|---|
+| single | 18/19 | 18/19 | 18/19 |
+| multi | 7.5/9 | 7.5/9 | 7.5/9 |
+| not_found | 7/7 | 7/7 | 7/7 |
+| adversarial | 5/5 | 5/5 | 5/5 |
+
+Partial = 0.5. Routing only makes sense if a cheaper model matches the larger one on a whole question type (e.g. single-paragraph lookups) AND the type can be told apart before answering.
+
+#### Scale estimate
+
+Estimate, not a measurement: 10,000 users x 3 queries a day x 22 working days = 660,000 queries a month, at the per-query cost measured above.
+
+| Model | Est. API cost per month (USD) |
+|---|---|
+| claude-sonnet-5-5 (medium) | $5,709 |
+| claude-haiku-5-5 (medium) | $378 |
+| claude-opus-5-5 (medium) | $13,728 |
+
+Excludes hosting, embeddings (run locally), retries and the Batch API / caching discounts.
+
+**Reading:**
+- All three models score 37.5/40 (94%), with the same score on every question type.
+- The three misses are the same questions for every model (S11, M04, M08), and all are retrieval failures: the answer paragraph (CF 170I, CF 132, CRM 65) was never sent. A bigger model does not fix them.
+- Opus fails two PRD targets: p95 10.6s (target < 8s) and about ₹1.97 a query (target < ₹1).
+- Haiku used the most thinking (372 tokens vs 42 for Sonnet) and was still about 15x cheaper than Sonnet.
+- 40 questions is small: one question = 2.5 points, so a tie means "not distinguishable here", not "equal".
+
+**Not used:** `eval_opus_20261105_2043.csv` is a second, ungraded Opus run. It could be graded later to measure run-to-run variation.
+
+
+---
+
+## 6 Nov 2026: Haiku holdout check
+
+**Purpose:** confirm the Week 4 choice on questions not used for tuning. Pass mark, set before the run: correct ≥ 11.5/15 (within one question of Sonnet's 12.5), 0 hallucinations, both refusals correct.
+
+**Run:** `python scripts/run_eval.py --label holdout_haiku --test-set holdout --model claude-haiku-5-5 --effort medium` → `results/eval_holdout_haiku_20261105_2137.csv`. Graded by me; Claude reviewed the grades and corrected three to match the README rules and the Sonnet holdout grading:
+- H05: yes → no. False refusal; CF 219Y not retrieved.
+- H06: yes → no, hallucination yes → no. False refusal; CF 429 not retrieved; nothing it said was outside the retrieved text.
+- H08: yes → partial. ₹1 crore cap (CF 219K) not retrieved, so it could not be confirmed. Sonnet got partial for the same gap.
+
+Citation column cleared for the four refusals (rule: blank if refused).
+
+| Metric | Sonnet 5.5 (29 Oct) | Haiku 5.5 (5 Nov) |
+|---|---|---|
+| Correct | 83% (12.5/15) | 83% (12.5/15) |
+| Correct refusals | 2/2 | 2/2 |
+| False refusals | 2/13 | 2/13 |
+| Citation accurate | 11/11 | 11/11 |
+| Hallucinations | 0/15 | 0/15 |
+| Median / p95 latency | 2.8s / 4.1s | 3.2s / 4.2s |
+| Avg tokens in / out | 2,470 / 264 | 2,470 / 496 |
+
+**Result: pass.** Same score, same three misses (H05, H06, H08), all retrieval. **Decision: default model switched to `claude-haiku-5-5` in `scripts/answer.py`.**
+
+**Lesson for grading:** a "Not found" reply to an answerable question is always `no`, even when the cause is retrieval. Note the missing paragraph in `manual_notes`.
+**Switch check (7 Nov 2026):** CLI and Streamlit both run on claude-haiku-5-5. Gold LTV question → 85%, Para 44. Answerable question in app → [what it said, para cited]. "Current repo rate" → correct refusal.

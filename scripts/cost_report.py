@@ -33,7 +33,7 @@ PRICES = {
     "claude-sonnet-5-5": {"input": 2.00, "output": 10.00},
     "claude-opus-5-5": {"input": 4.00, "output": 20.00},
 }
-USD_TO_INR = None   # optional: set a rate (e.g. from RBI's reference rate on the day) to add a ₹ column
+USD_TO_INR = 94.8416   # RBI reference rate, 4 Nov 2026 (via MSEI RBI reference-rate archive); None to drop the ₹ column
 
 # Scale estimate for the write-up. These are ASSUMPTIONS, not measurements: change them and say so.
 QUERIES_PER_USER_PER_DAY = 3      # assumption: a branch officer checks ~3 rules a working day

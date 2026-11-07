@@ -34,7 +34,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
 
-MODEL = "claude-sonnet-5-5"     # current Sonnet model ID; try "claude-haiku-5-5" later for the cost comparison
+MODEL = "claude-haiku-5-5"      # Week 4 choice: same accuracy as Sonnet (94% tuned set, 83% holdout), ~15x cheaper. See docs/eval_log.md
 MAX_TOKENS = 2000               # ceiling on output INCLUDING Claude's thinking; the prompt keeps answers < 150 words
 EFFORT = "medium"               # how much Claude thinks first: "low", "medium" or "high" (model default is higher)
 SYSTEM_PROMPT_FILE = ROOT / "prompts" / "system_prompt_v2.md"   # v2 adopted after Week 3 iteration 2 (v1 = baseline)
