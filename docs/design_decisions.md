@@ -1,8 +1,8 @@
 # Design decisions: why Credit Assist is built this way
 
 One page per decision: what was chosen, why, what the evidence was, and what was given up.
-This is for explaining the project in an interview without notes. Where a reason is yours alone
-(not visible in the code or logs), there is a **Your reason:** line to fill in in your own words.
+This is for explaining the project in an interview without notes. Where a reason is mine alone
+(not visible in the code or logs), it is marked **My reason:**.
 
 Numbers come from `docs/eval_log.md` and `results/`. Code references are to files in `scripts/`.
 
@@ -13,14 +13,13 @@ Numbers come from `docs/eval_log.md` and `results/`. Code references are to file
 - **User:** bank branch credit and operations staff, who need a specific RBI rule (LTV ceiling, reporting timeline, valuation requirement) while a customer or file is in front of them.
 - **Problem:** the rules are spread across long Master Directions (the Credit Facilities PDF alone runs to over 150 pages), amended over time, with paragraph numbers like 219ZE. Searching the PDF is slow, and a wrong reading has compliance consequences.
 - **What the tool is not:** it does not make sanction decisions or give legal advice (system prompt rule 3), and it uses public RBI text only, never internal circulars or customer data.
-- **Your reason:** why this user and problem, from your own branch experience: ____
+- **My reason:** in retail credit I saw staff apply rules that had since changed. An auditor flagged a housing loan (land purchase + construction) for breaching margin norms that had changed about a month before sanction; and a gold-loan customer, quoted an outdated LTV, took his business to another bank. The cost is compliance findings and lost business, not only slow search.
 
-## 2. Corpus: 3 credit directions, not KYC and not all 16
+## 2. Corpus: 3 credit directions, not all 16
 
 - 16 public Master Directions are listed in `data/manifest.csv`; only 3 are indexed: Credit Facilities, Credit Information Reporting, Credit Risk Management (618 paragraphs, 648 chunks).
-- The PRD started as "KYC Assist"; the build moved to credit directions in Week 2.
 - **Trade-off:** a smaller corpus made hand-checking every table and gold answer possible. The cost is narrow coverage: questions on KYC, IRAC or wilful defaulters are refused. The test set uses exactly those as "not found" cases.
-- **Your reason for switching from KYC to credit:** ____
+- **My reason for credit rules:** they match my own work in retail credit, where these are the rules applied to every loan file.
 
 ## 3. Ingestion and cleaning: verify against the PDF, fix by hand where needed
 
@@ -56,11 +55,12 @@ Numbers come from `docs/eval_log.md` and `results/`. Code references are to file
 - **Decision:** keep it off. The holdout gain mostly reflects the cases it was designed for. Revisit only if a full answer-quality run on the fresh set shows a gain worth the extra tokens.
 - **This is the story to tell:** a fix that looked good on the data that inspired it, and didn't generalise.
 
-## 8. Model and settings: Sonnet 5.5, effort medium, max_tokens 2000
+## 8. Model and settings: Haiku 5.5, effort medium, max_tokens 2000
 
 - **Why:** the first run at the default effort with max_tokens 600 cut answers off. Thinking tokens count against max_tokens. Medium effort used 0 thinking tokens on simple lookups and some on calculations, and fixed the cut-offs (gold loan answer: 7.2s cut off → 4.5s complete).
-- **Cost:** about $8.65 per 1,000 queries at the prices in `cost_report.py` (checked 29 Oct 2026), well under the PRD's ₹1 per query.
-- **Next:** the Week 4 comparison with Haiku and Opus on the same questions (`run_eval.py --model`).
+- **Model choice (Week 4):** the 40 questions were run on Haiku 5.5, Sonnet 5.5 (the Week 3 model) and Opus 5.5 with everything else fixed. All three scored 94%, with the same three misses, all retrieval. Opus missed two targets (p95 10.6s, about ₹1.97 a query). Haiku then matched Sonnet on the 15 holdout questions (83%, 0 hallucinations), so the default switched to `claude-haiku-5-5` on 6 Nov.
+- **Cost:** Haiku about $0.57 per 1,000 queries vs $8.65 for Sonnet and $20.80 for Opus, at the prices in `cost_report.py` (checked 3 Nov 2026). Haiku is about ₹0.05 a query against the PRD's ₹1 target.
+- **Trade-off:** Haiku used more thinking tokens (372 vs 42 on average) and is still about 15x cheaper. Run-to-run variation is not measured yet.
 
 ## 9. Prompt: every rule traces to a failure
 

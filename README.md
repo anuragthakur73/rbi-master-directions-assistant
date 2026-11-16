@@ -2,6 +2,11 @@
 
 A question-answering assistant for bank branch credit staff. It answers from three public RBI Master Directions, cites the paragraph behind every claim, and says "Not found in the provided documents." when the answer isn't there.
 
+**Live demo: https://credit-assist-rbi.streamlit.app**
+(Free hosting: if nobody has used it for 12 hours it sleeps, and the first visitor clicks "Yes, get this app back up!" and waits about a minute.)
+
+**Project documents:** [PRD](docs/PRD.md) (problem, users, targets, requirements) · [Retrospective](docs/retrospective.md) (results, trade-offs, failures, V2)
+
 > Prototype, built as an AI product portfolio project. Not legal or regulatory advice: always verify against the official RBI document.
 
 ## The problem
@@ -13,33 +18,37 @@ Branch credit and operations staff often need one specific rule (an LTV ceiling,
 - Answers in under 150 words, citing every claim as `[Credit Facilities, Para 44]`.
 - Refuses when the answer isn't in the loaded documents, instead of answering from general knowledge.
 - Compares figures with mandatory limits ("90.3% exceeds the 90% ceiling") and shows calculation steps, but never makes a sanction decision.
-- Shows the exact paragraphs it was given, so the user can check the answer.
+- Shows the RBI text of each cited paragraph, so the user can check the answer in one click.
+- Flags answers it can't trace: no citation, or a citation to a paragraph that wasn't retrieved (a likely made-up citation).
+- Blocks questions that look like they contain customer data (PAN, Aadhaar, mobile, email, account or card number) before anything is sent to the model.
+- Collects 👍/👎 and comments on every answer.
 
 Corpus: RBI (Commercial Banks) Credit Facilities, Credit Information Reporting and Credit Risk Management Directions, 2025 (618 paragraphs). The sidebar shows each direction's "updated as on" date.
 
-## Results (Week 3)
+## Results
 
-Hand-graded. Model `claude-sonnet-5-5` (Week 3 model; Week 4 switched to Haiku 5.5 at the same accuracy, see Status), effort medium, hybrid retrieval, system prompt v2.
+Hand-graded. Deployed setup: model `claude-haiku-5-5`, effort medium, hybrid retrieval, system prompt v2.
 
 | Metric | Unseen questions (holdout, 15) | Tuned test set (40) | PRD target |
 |---|---|---|---|
 | Correct (partial = 0.5) | **83%** | 94% | ≥ 85% |
 | Correct refusals (out-of-corpus) | 2/2 | 8/8 | — |
 | Citation accuracy | 100% | 100% | ≥ 90% |
-| Hallucination rate | 0% | 2.5% (1 minor) | ≤ 5% |
-| Latency, median / p95 | 2.8s / 4.1s | 3.4s / 7.2s | p95 < 8s |
-| Cost per 1,000 queries | — | about $8.65 | < ₹1 per query |
+| Hallucination rate | 0% | 0% | ≤ 5% |
+| Latency, median / p95 | 3.2s / 4.2s | 2.5s / 6.7s | p95 < 8s |
+| Cost per 1,000 queries | — | about $0.57 (about ₹0.05 a query) | < ₹1 per query |
 
-The headline is **83% on unseen questions**. The 94% is on the questions used to find and fix problems, so it is optimistic. Both samples are small: one holdout question moves the score by 6.7 points. Cost uses Anthropic's list prices as checked on 29 Oct 2026 (`scripts/cost_report.py`).
+The headline is **83% on unseen questions**. The 94% is on the questions used to find and fix problems, so it is optimistic. Both samples are small: one holdout question moves the score by 6.7 points. Cost uses Anthropic's list prices as checked on 3 Nov 2026 (`scripts/cost_report.py`).
 
-How the score moved, one change at a time ([full log](docs/eval_log.md)):
+How the score moved, one change at a time, tuned on Sonnet 5.5 in Week 3 ([full log](docs/eval_log.md)):
 
 | Iteration | Change | Correct (40 q) |
 |---|---|---|
 | Baseline | Semantic search, prompt v1 | 82% |
 | 1 | + keyword search and paragraph lookup (hybrid) | 91% |
 | 2 | Prompt v2: plain limit breaches, scope check before flagging conflicts | 94% |
-| Holdout | 15 unseen questions, nothing changed | 83% |
+| Holdout | 15 unseen questions, nothing changed | 83% (15 q) |
+| Model switch (Week 4) | Same setup on Haiku 5.5 | 94%, and 83% on the holdout |
 
 All three holdout misses were retrieval failures, not model errors.
 
@@ -71,15 +80,15 @@ pip install -r requirements.txt
 ```
 
 1. Create `.env` in the repo root with `ANTHROPIC_API_KEY=...` (and `ANTHROPIC_WORKSPACE_ID=...` if your key needs it). Check it with `python scripts/check_api_key.py`.
-2. Download the three credit PDFs listed in `data/manifest.csv` into `data/raw/`.
-3. Build the index (no API calls):
+2. Quick start: `streamlit run scripts/app.py`. It builds the index from the committed `data/processed/chunks.jsonl` on first start (about a minute, no API calls).
+3. To rebuild from the source PDFs instead, download the three credit PDFs listed in `data/manifest.csv` into `data/raw/`, then run (no API calls):
    ```
    python scripts/ingest.py
    python scripts/clean.py
    python scripts/chunk.py
    python scripts/embed_store.py
    ```
-4. Ask questions: `streamlit run scripts/app.py`, or `python scripts/answer.py "What is the maximum LTV for a gold loan of 4 lakh?"`
+4. Ask questions in the app, or from the command line: `python scripts/answer.py "What is the maximum LTV for a gold loan of 4 lakh?"`
 
 Evaluate (see [tests/README.md](tests/README.md)):
 
@@ -97,15 +106,16 @@ python scripts/score_eval.py results/eval_my_run_<date>.csv
 | `prompts/` | System prompts v1–v3 with change logs |
 | `tests/` | Test sets: v1 (40), holdout (15), fresh (16), real-question template |
 | `results/` | Graded evaluation runs and summaries |
-| `docs/` | Evaluation log, design decisions, user evidence plan |
-| `data/manifest.csv` | Source documents. `data/overrides/` holds hand-verified fixes. PDFs, processed text and the vector store are not committed |
+| `docs/` | PRD, retrospective, evaluation log, design decisions, user evidence plan |
+| `data/manifest.csv` | Source documents. `data/overrides/` holds hand-verified fixes. `data/processed/chunks.jsonl` (the cleaned, chunked text) is committed so the hosted app can build its index; PDFs, other processed text and the vector store are not |
 
 ## Known limits
 
 - **Small, self-written test sets.** The questions were written from the documents and graded by one person. Next: real staff phrasing ([plan](docs/user_evidence_plan.md)) and a blind second grader (`scripts/second_grader.py`).
 - **Wording gaps.** "Maximum" vs "shall not exceed" and "renewed" vs "renewal" still cause misses.
 - **Narrow corpus.** Only 3 of the 16 directions in the manifest are indexed; KYC, IRAC and the others are refused.
-- **Single-user prototype.** No login, no access control, and questions are logged locally to `logs/qa_log.csv`.
+- **Demo-grade hosting.** No login. Cost is capped by usage limits (20 questions per session, 200 per day) and a monthly spend limit. On the hosted app, logs and the daily counter reset when it restarts or sleeps, so logs are downloaded after each test session.
+- **Pattern-based personal-data check.** It catches common ID and number formats, not names or addresses, and can flag a long amount typed without commas.
 
 ## Keeping the corpus current
 
@@ -123,6 +133,8 @@ Public RBI Master Directions only, listed in `data/manifest.csv`. Never used: in
 
 - Weeks 1–3 complete: setup, prototype (CLI + Streamlit), 40-question evaluation with two iterations, and a holdout check.
 - Week 4: model comparison on the 40-question set. Haiku 5.5, Sonnet 5.5 and Opus 5.5 all scored 94%; Opus missed the latency and cost targets. Haiku matched Sonnet on the holdout set too (83%, no hallucinations), at about $0.57 per 1,000 queries vs $8.65. **Default model switched to Haiku 5.5.** Details: `docs/eval_log.md`, `docs/week4_plan.md`.
-- Next: fresh-set evaluation of neighbour paragraphs and prompt v3, real-question set from credit staff.
+- Week 5: UX fallbacks (refusal, untraceable-answer warning, error retry, personal-data block), trust features (cited-paragraph text, source dates, standing disclaimer, 👍/👎), usage caps, and deployment to Streamlit Community Cloud. Details: `docs/week5_plan.md`.
+- Week 6 (in progress): portfolio package. [PRD](docs/PRD.md) and [retrospective](docs/retrospective.md) added; demo video next.
+- In progress: user testing with credit staff (`docs/user_testing_notes.md`), real-question set, fresh-set evaluation of neighbour paragraphs and prompt v3.
 
 License: see `LICENSE`.
