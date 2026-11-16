@@ -111,6 +111,17 @@ def build() -> chromadb.Collection:
     return collection
 
 
+
+def ensure_store() -> bool:
+    """Week 5 (deploy): build the store only if this machine doesn't have it yet.
+    data/vectorstore/ is git-ignored, so a fresh Streamlit Cloud deploy starts without it and builds it
+    from the committed data/processed/chunks.jsonl on first start. Returns True if it had to build."""
+    client = chromadb.PersistentClient(path=str(DB_DIR))
+    if COLLECTION in [c.name for c in client.list_collections()] and client.get_collection(COLLECTION).count():
+        return False
+    build()
+    return True
+
 # Questions whose correct paragraph is known (from prompts/test_context.md and the ingestion notes)
 SMOKE_TESTS = [
     ("What is the maximum LTV for a gold loan of 4 lakh?", "CF Para 44"),

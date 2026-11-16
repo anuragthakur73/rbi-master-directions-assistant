@@ -211,6 +211,10 @@ def answer(question: str, client: anthropic.Anthropic | None = None) -> dict:
                       f'{e["para"] if e["para"].startswith(("Annex", "Intro", "deleted")) else "Para " + e["para"]}'
                       f' ({e["best_similarity"]})' for e in excerpts],
         "documents": documents,
+        "excerpts": [{"doc": SHORT_NAMES.get(e["source"], e["source"]),   # Week 5: for "cited paragraphs" in the UI
+                      "label": e["para"] if e["para"].startswith(("Annex", "Intro", "deleted")) else f'Para {e["para"]}',
+                      "pages": f'{e["page_start"]}-{e["page_end"]}' if e["page_start"] != -1 else "n/a",
+                      "title": e["title"], "updated": e["updated_as_on"], "text": e["text"]} for e in excerpts],
         "model": MODEL,
         "retrieval_mode": RETRIEVAL_MODE,
         "retrieval_seconds": round(t_retrieve, 2),

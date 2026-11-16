@@ -77,3 +77,31 @@ def log_error(question: str, error: str, interface: str, settings: dict) -> str:
     row.update({"outcome": "error", "error": error})
     _write(row)
     return row["run_id"]
+
+
+# ---------- Week 5: blocked questions and user feedback ----------
+FEEDBACK_FILE = ROOT / "logs" / "feedback.csv"
+FEEDBACK_FIELDS = ["run_id", "timestamp", "rating", "comment", "question"]
+
+
+def log_blocked(question: str, reason: str, interface: str, settings: dict) -> str:
+    """A question stopped before reaching Claude (possible personal data, daily limit).
+    Pass the question already redacted (guards.redact) so personal data never reaches the log."""
+    row = _base(question, interface, settings)
+    row.update({"outcome": "blocked", "error": reason})
+    _write(row)
+    return row["run_id"]
+
+
+def log_feedback(run_id: str, question: str, rating: int | None, comment: str = "") -> None:
+    """One row per thumbs click or comment. rating: 1 = thumbs up, 0 = thumbs down, None = cleared.
+    Join to qa_log.csv on run_id; the latest row for a run_id is the user's final rating."""
+    FEEDBACK_FILE.parent.mkdir(exist_ok=True)
+    new_file = not FEEDBACK_FILE.exists()
+    with FEEDBACK_FILE.open("a", newline="", encoding="utf-8-sig" if new_file else "utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=FEEDBACK_FIELDS)
+        if new_file:
+            writer.writeheader()
+        writer.writerow({"run_id": run_id, "timestamp": datetime.now().isoformat(timespec="seconds"),
+                         "rating": {1: "up", 0: "down"}.get(rating, "cleared"),
+                         "comment": comment.strip(), "question": question})

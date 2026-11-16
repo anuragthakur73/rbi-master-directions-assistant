@@ -311,4 +311,4 @@ Citation column cleared for the four refusals (rule: blank if refused).
 **Result: pass.** Same score, same three misses (H05, H06, H08), all retrieval. **Decision: default model switched to `claude-haiku-5-5` in `scripts/answer.py`.**
 
 **Lesson for grading:** a "Not found" reply to an answerable question is always `no`, even when the cause is retrieval. Note the missing paragraph in `manual_notes`.
-**Switch check (7 Nov 2026):** CLI and Streamlit both run on claude-haiku-5-5. Gold LTV question → 85%, Para 44. Answerable question in app → [what it said, para cited]. "Current repo rate" → correct refusal.
+**Switch check (7 Nov 2026):** CLI and Streamlit both run on claude-haiku-5-5. Gold LTV question → 85%, Para 44. Answerable question in app ("How many days does a credit institution have to correct a credit report after a customer complains?") → 21 calendar days, CIR Para 36(2), on claude-haiku-5-5 (logs/qa_log.csv, 7 Nov 13:02). "Current repo rate" → correct refusal.

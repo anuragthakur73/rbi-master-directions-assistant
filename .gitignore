@@ -224,7 +224,9 @@ __marimo__/
 data/raw/*
 !data/raw/.gitkeep
 # Rebuilt by scripts/ingest.py, clean.py, chunk.py and embed_store.py
-data/processed/
+data/processed/*
+# ...except the chunks: the deployed app builds its index from this file (Week 5)
+!data/processed/chunks.jsonl
 data/vectorstore/
 # Question log written by the app and run_eval.py on each machine (eval results live in results/)
 logs/
